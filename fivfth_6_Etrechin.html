@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>PayOnen | بوابة الدفع</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+  <script src="https://cdn.moyasar.com/mpf/1.7.2/moyasar.js"></script>
+  <style>
+    body {
+      background-color: #f4f7fc;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      max-width: 600px;
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      margin-top: 5%;
+    }
+    .btn-custom {
+      background-color: #007bff;
+      color: white;
+    }
+    .btn-custom:hover {
+      background-color: #0056b3;
+    }
+    .form-control {
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <nav class="navbar navbar-dark bg-dark justify-content-between px-3">
+      <span class="navbar-brand">PayOnen</span>
+      <button class="btn btn-light btn-sm" @click="toggleLang">{{ lang === 'ar' ? 'English' : 'العربية' }}</button>
+    </nav>
+
+    <div class="container my-5" v-if="termsAccepted">
+      <h2 class="text-center mb-4">{{ t('title') }}</h2>
+
+      <div class="payment-icons">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" alt="Apple Pay" height="30">
+      </div>
+
+      <div class="ssl-secure">
+        <i class="bi bi-lock-fill"></i> {{ t('ssl') }}
+      </div>
+
+      <form @submit.prevent="submitForm">
+        <div class="mb-3">
+          <label>{{ t('amount') }}</label>
+          <input type="number" class="form-control" v-model="amount" min="1" required>
+        </div>
+
+        <div class="mb-3">
+          <label>{{ t('currency') }}</label>
+          <select class="form-control" v-model="currency">
+            <option value="SAR">{{ t('sar') }}</option>
+            <option value="USD">{{ t('usd') }}</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label>{{ t('method') }}</label>
+          <select class="form-control" v-model="method" disabled>
+            <option value="applepay">Apple Pay</option>
+          </select>
+        </div>
+
+        <div v-if="method === 'applepay'">
+          <p class="alert alert-info">{{ t('applePayNote') }}</p>
+        </div>
+
+        <button type="submit" class="btn btn-success w-100" :disabled="processing">{{ processing ? t('processing') : t('pay') }}</button>
+      </form>
+
+      <div v-if="paymentSuccess" class="alert alert-success mt-4">{{ t('success') }}</div>
+      <div v-if="paymentError" class="alert alert-danger mt-4">{{ t('error') }}</div>
+    </div>
+
+    <div v-else>
+      <p class="text-center">يجب عليك قبول الشروط والأحكام قبل متابعة الخدمة. <a href="terms.html">اضغط هنا للموافقة على الشروط</a></p>
+    </div>
+
+    <footer class="text-center text-muted my-4">
+      {{ t('footer') }}
+    </footer>
+  </div>
+
+  <script>
+    new Vue({
+      el: '#app',
+      data: {
+        lang: 'ar',
+        amount: 1,
+        currency: 'SAR',
+        method: 'applepay',
+        paymentSuccess: false,
+        paymentError: false,
+        processing: false,
+        termsAccepted: localStorage.getItem('termsAccepted') === 'true',
+        translations: {
+          ar: {
+            title: 'بوابة الدفع الآمنة',
+            amount: 'المبلغ',
+            currency: 'العملة',
+            sar: 'ريال سعودي',
+            usd: 'دولار أمريكي',
+            method: 'وسيلة الدفع',
+            pay: 'ادفع الآن',
+            ssl: 'مؤمن بواسطة SSL',
+            footer: 'هذا الموقع يوفر خدمة دفع إلكتروني آمن عبر Moyasar.',
+            success: '✅ تمت العملية بنجاح!',
+            error: '❌ فشلت العملية، تأكد من البيانات أو حاول لاحقاً.',
+            applePayNote: 'Apple Pay يعمل فقط عبر Safari وiPhone على نطاق HTTPS.',
+            processing: 'جاري المعالجة...'
+          },
+          en: {
+            title: 'Secure Payment Gateway',
+            amount: 'Amount',
+            currency: 'Currency',
+            sar: 'Saudi Riyal',
+            usd: 'USD',
+            method: 'Payment Method',
+            pay: 'Pay Now',
+            ssl: 'Secured with SSL',
+            footer: 'This site provides secure online payment via Moyasar.',
+            success: '✅ Payment completed successfully!',
+            error: '❌ Payment failed. Please check your data and try again.',
+            applePayNote: 'Apple Pay only works via Safari + iPhone on HTTPS domain.',
+            processing: 'Processing...'
+          }
+        }
+      },
+      methods: {
+        t(key) {
+          return this.translations[this.lang][key];
+        },
+        toggleLang() {
+          this.lang = this.lang === 'ar' ? 'en' : 'ar';
+          document.documentElement.lang = this.lang;
+          document.documentElement.dir = this.lang === 'ar' ? 'rtl' : 'ltr';
+        },
+        submitForm() {
+          this.paymentSuccess = false;
+          this.paymentError = false;
+          this.processing = true;
+          const amount = this.amount * 100;
+
+          if (this.amount < 1) {
+            alert(this.lang === 'ar' ? 'الحد الأدنى للدفع هو 1' : 'Minimum amount is 1');
+            this.processing = false;
+            return;
+          }
+
+          if (this.method === 'applepay') {
+            Moyasar.init({
+              amount,
+              currency: this.currency,
+              description: "دفع عبر Apple Pay",
+              publishable_api_key: "pk_live_nybFXaEt9NKDQFiuDrKCLmrXLsVBfhWChmrbjncZ",
+              callback_url: "https://yourwebsite.com/thanks",
+              methods: ['applepay']
+            });
+          }
+
+          setTimeout(() => {
+            this.paymentSuccess = true;
+            this.processing = false;
+          }, 3000);
+        }
+      },
+      created() {
+        if (!this.termsAccepted) {
+          window.location.href = "terms.html"; // Redirect if terms are not accepted
+        }
+      }
+    });
+  </script>
+</body>
+</html>
