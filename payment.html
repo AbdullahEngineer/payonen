@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>الدفع عبر Moyasar</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f4f7fc;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      max-width: 600px;
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      margin-top: 5%;
+    }
+    .btn-custom {
+      background-color: #007bff;
+      color: white;
+    }
+    .btn-custom:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 class="text-center mb-4">إتمام الدفع</h2>
+    <p>يرجى إتمام الدفع للمتابعة:</p>
+    <div class="text-center">
+      <button class="btn btn-custom" id="payment-button">دفع الآن</button>
+    </div>
+    <div id="error-message" class="text-danger mt-3"></div>
+  </div>
+
+  <script src="https://cdn.moyasar.com/js/checkout.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // تأكد من قبول الشروط
+      if (localStorage.getItem('termsAccepted') !== 'true') {
+        window.location.href = 'index.html'; // العودة إلى صفحة الشروط إذا لم يتم القبول
+        return;
+      }
+
+      // إعداد التكامل مع Moyasar
+      var checkout = new MoyasarCheckout({
+        key: "your_public_key_here", // استبدل بمفتاح الـ public الخاص بـ Moyasar
+        amount: 1000, // المبلغ بالريال السعودي أو العملة المستخدمة
+        currency: "SAR", // العملة (مثل SAR للريال السعودي)
+        order_id: "order_id_12345", // معرف الطلب
+        description: "دفع لخدمة معينة",
+        success_url: "https://your-site.com/success", // رابط عند نجاح الدفع
+        failure_url: "https://your-site.com/failure", // رابط عند فشل الدفع
+      });
+
+      // إظهار زر الدفع في الصفحة
+      checkout.show('payment-button');
+
+      // عند اكتمال الدفع
+      checkout.on('payment.completed', function(result) {
+        console.log(result);
+        fetch('/charge', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ paymentResult: result })
+        }).then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('تم الدفع بنجاح!');
+            } else {
+              alert('فشلت عملية الدفع');
+            }
+          });
+      });
+
+      // عند فشل الدفع
+      checkout.on('payment.failed', function(error) {
+        document.getElementById('error-message').textContent = 'فشلت عملية الدفع: ' + error.message;
+      });
+    });
+  </script>
+</body>
+</html>
